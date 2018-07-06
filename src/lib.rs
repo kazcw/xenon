@@ -12,19 +12,29 @@ use typenum::consts::*;
 use typenum::{Pow, Unsigned};
 
 #[derive(Copy, Clone, Default, PartialEq, Eq, Ord, PartialOrd)]
-pub struct Xe<T, B = U10>(u64, T, B);
+pub struct Xe<T, B = U10, V = u64>(V, T, B);
 
-pub type Xe0 = Xe<U0, U10>;
-pub type Xe1 = Xe<U1, U10>;
-pub type Xe2 = Xe<U2, U10>;
-pub type Xe3 = Xe<U3, U10>;
-pub type Xe4 = Xe<U4, U10>;
-pub type Xe5 = Xe<U5, U10>;
-pub type Xe6 = Xe<U6, U10>;
-pub type Xe7 = Xe<U7, U10>;
-pub type Xe8 = Xe<U8, U10>;
+pub type Xe0<V = u64> = Xe<U0, U10, V>;
+pub type Xe1<V = u64> = Xe<U1, U10, V>;
+pub type Xe2<V = u64> = Xe<U2, U10, V>;
+pub type Xe3<V = u64> = Xe<U3, U10, V>;
+pub type Xe4<V = u64> = Xe<U4, U10, V>;
+pub type Xe5<V = u64> = Xe<U5, U10, V>;
+pub type Xe6<V = u64> = Xe<U6, U10, V>;
+pub type Xe7<V = u64> = Xe<U7, U10, V>;
+pub type Xe8<V = u64> = Xe<U8, U10, V>;
+
+pub type XeN = Xe<u8, U10, u64>;
 
 impl<T, B> Xe<T, B> {
+    #[inline]
+    pub fn from_parts(n: u64, t: T) -> Self
+    where
+        B: Default,
+    {
+        Xe(n, t, B::default())
+    }
+
     #[inline]
     pub fn from_quanta(n: u64) -> Self
     where
@@ -90,7 +100,7 @@ fn hilo(n: u128) -> (u64, u64) {
     ((n >> 64) as u64, n as u64)
 }
 
-impl<T0, T1, B> Mul<Xe<T1, B>> for Xe<T0, B> where T0: Unsigned + Add<T1>
+impl<T0, T1, B> Mul<Xe<T1, B>> for Xe<T0, B> where T0: Add<T1>
 {
     type Output = Xe<<T0 as Add<T1>>::Output, B>;
 
@@ -129,19 +139,42 @@ where
     }
 }
 
+impl<U10> Display for Xe<u8, U10> {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        let mut s = [b'0'; 20];
+        let mut x = self.0;
+        let start = {
+            let mut inserter = s.iter_mut().rev();
+            for c in inserter.by_ref() {
+                *c = ((x % 10) as u32 + '0' as u32) as u8;
+                x /= 10;
+                if x == 0 {
+                    break;
+                }
+            }
+            inserter.count()
+        };
+        let start = min(start, 19 - self.1);
+        let s = unsafe { std::str::from_utf8_unchecked(&s) };
+        let (ipart, fpart) = s.split_at(20 - self.1);
+        let ipart = &ipart[start..];
+        write!(f, "{}.{}", ipart, fpart)
+    }
+}
+
 impl<T, B> Debug for Xe<T, B>
 where
-    T: Unsigned,
-    B: Unsigned,
+    T: Debug,
+    B: Debug,
     Xe<T, B>: Display,
 {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         write!(
             f,
-            "{}\t=\tXe<{}, {}>({})",
+            "{}\t=\tXe<{:?}, {:?}>({})",
             self,
-            T::to_usize(),
-            B::to_usize(),
+            self.1,
+            self.2,
             self.0
         )
     }
@@ -191,6 +224,17 @@ mod tests {
         let a = Xe2::from_u64(2).unwrap();
         let b: Xe1 = "0.2".parse().unwrap();
         let c = Xe::from_quanta(0_400);
+        //eprintln!("test_mul: a: {:?}", a);
+        //eprintln!("test_mul: b: {:?}", b);
+        //eprintln!("test_mul: c: {:?}", c);
+        assert_eq!(a * b, c);
+    }
+
+    #[test]
+    fn test_mul2() {
+        let a = XeN::from_parts(2, 2);
+        let b = XeN::from_parts(2, 1);
+        let c = XeN::from_parts(4, 3);
         //eprintln!("test_mul: a: {:?}", a);
         //eprintln!("test_mul: b: {:?}", b);
         //eprintln!("test_mul: c: {:?}", c);
