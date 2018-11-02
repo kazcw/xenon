@@ -2,6 +2,9 @@
 name = "xenon"
 version = "0.1.0"
 authors = ["Kaz Wesley <kaz@lambdaverse.org>"]
+license = "MIT/Apache-2.0"
+description = "Library for simple fixed-point decimal arithmetic"
+repository = "https://github.com/kazcw/xenon"
 
 [dependencies]
 failure = { version = "0.1", default-features = false }
